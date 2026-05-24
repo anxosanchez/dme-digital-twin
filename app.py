@@ -105,6 +105,14 @@ analytics = st.session_state.analytics
 
 def toggle_running():
     st.session_state.is_running = not st.session_state.is_running
+    if st.session_state.is_running:
+        st.session_state.caudal_dme = 438.47
+        st.session_state.hotspot_t = 267.0
+        st.session_state.presion_sistema = 110.0
+    else:
+        st.session_state.caudal_dme = 0.00
+        st.session_state.hotspot_t = 150.0
+        st.session_state.presion_sistema = 1.0
 
 # ==========================================
 # BARRA LATERAL (SIDEBAR)
@@ -120,6 +128,9 @@ else:
 if st.sidebar.button("🔄 RESET", use_container_width=True):
     st.session_state.engine = DigitalTwinEngine()
     st.session_state.is_running = False
+    st.session_state.caudal_dme = 0.00
+    st.session_state.hotspot_t = 150.0
+    st.session_state.presion_sistema = 1.0
     st.session_state.pid_sim = {'time': [], 'T_gasifier': [], 'R_recycle': []}
     st.rerun()
 
@@ -176,22 +187,20 @@ if st.session_state.is_running:
 # ==========================================
 st.title("🏭 Xemelo Dixital de Síntese de DME (DCS)")
 
-# Axuste de valores ASPEN forzados por requerimento de deseño cando está en execución
-if st.session_state.is_running:
-    kpi_dme = f"{engine.last_mass_balance['out_dme']:.2f}"
-    kpi_dme_delta = "Activo"
-    kpi_hotspot = f"{np.max(engine.state_meoh[9::10]) - 273.15:.1f}" if hasattr(engine, 'state_meoh') else "267.0"
-    kpi_comp = f"{engine.compressor.P_out_setpoint:.1f}" if hasattr(engine, 'compressor') else "110.0"
-else:
-    kpi_dme = "0.00"
-    kpi_dme_delta = "Parado"
-    kpi_hotspot = "150.0"
-    kpi_comp = "1.0"
+# Inicialización segura para o primeiro render antes de usar os botóns
+if 'caudal_dme' not in st.session_state:
+    st.session_state.caudal_dme = 0.00
+if 'hotspot_t' not in st.session_state:
+    st.session_state.hotspot_t = 150.0
+if 'presion_sistema' not in st.session_state:
+    st.session_state.presion_sistema = 1.0
+
+kpi_dme_delta = "Activo" if st.session_state.is_running else "Parado"
 
 col1, col2, col3 = st.columns(3)
-col1.metric("Caudal de DME (D3-1 Cabeza)", f"{kpi_dme} kg/h", delta=kpi_dme_delta)
-col2.metric("Hotspot PFR Metanol (R2-1)", f"{kpi_hotspot} °C", delta=f"{float(kpi_hotspot) - 150.0:.1f} °C vs base" if float(kpi_hotspot) > 150 else "")
-col3.metric("Descarga do Compresor (K2-1)", f"{kpi_comp} bar", delta=f"{float(kpi_comp) - 1.0:.1f} bar vs Atm" if float(kpi_comp) > 1 else "")
+col1.metric("Caudal de DME (D3-1 Cabeza)", f"{st.session_state.caudal_dme:.2f} kg/h", delta=kpi_dme_delta)
+col2.metric("Hotspot PFR Metanol (R2-1)", f"{st.session_state.hotspot_t:.1f} °C", delta=f"{st.session_state.hotspot_t - 150.0:.1f} °C vs base" if st.session_state.hotspot_t > 150 else "")
+col3.metric("Descarga do Compresor (K2-1)", f"{st.session_state.presion_sistema:.1f} bar", delta=f"{st.session_state.presion_sistema - 1.0:.1f} bar vs Atm" if st.session_state.presion_sistema > 1 else "")
 
 st.markdown("---")
 
@@ -218,7 +227,7 @@ with tab_scada:
         
         **Sección de Compresión (K2-1)**
         - Presión de Aspiración: `1.0 bar`
-        - Presión de Descarga: `{kpi_comp} bar`
+        - Presión de Descarga: `{st.session_state.presion_sistema:.1f} bar`
         - Etapas Activas: `5` (Ratio ~2.55)
         - Velocidade (RPM): `{'2500' if st.session_state.is_running else '0'}`
         """)
