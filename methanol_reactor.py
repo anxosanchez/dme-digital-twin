@@ -69,7 +69,7 @@ class MethanolPFR:
         
         # Xeometría R2-1
         self.N_tubes = 2000
-        self.L = 0.35 # m
+        self.L = 2.0 # m
         self.D_tube = 0.015 # m
         self.eps = 0.5 # void fraction
         self.rho_cat = 2000.0 # kg/m3 (partícula)
