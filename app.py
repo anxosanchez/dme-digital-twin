@@ -314,7 +314,9 @@ with tab_analytics:
         
         total_in = df_mass[df_mass["Tipo"] == "Entrada"]["Caudal (kg/h)"].sum()
         total_out = df_mass[df_mass["Tipo"] == "Saída"]["Caudal (kg/h)"].sum() + df_mass[df_mass["Tipo"] == "Inventario"]["Caudal (kg/h)"].sum()
-        st.success(f"✔️ **Balance pechado.** Erro de peche: {total_in - total_out:.4f} kg/h (0.00%)")
+        desviacion = abs(total_in - total_out)
+        desv_pct = (desviacion / total_in) * 100.0 if total_in > 0 else 0.0
+        st.success(f"✔️ **Balance pechado.** Desviación: {desviacion:.4f} kg/h ({desv_pct:.2f}%)")
         
     with col_table_right:
         st.markdown("#### Balance Elemental por Especies")
