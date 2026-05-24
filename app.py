@@ -83,14 +83,26 @@ CSS = """
 st.markdown(CSS, unsafe_allow_html=True)
 
 # ==========================================
-# INICIALIZACIÓN DO ESTADO
+# INICIALIZACIÓN DO ESTADO E VARIABLES
 # ==========================================
+dt = 1.0  # Paso de integración global
+
 if 'engine' not in st.session_state:
     st.session_state.engine = DigitalTwinEngine()
 if 'analytics' not in st.session_state:
     st.session_state.analytics = ProcessAnalytics()
 if 'is_running' not in st.session_state:
     st.session_state.is_running = False
+
+# Variables protexidas para métricas e UI
+if 'caudal_dme' not in st.session_state:
+    st.session_state.caudal_dme = 0.00
+if 'hotspot_t' not in st.session_state:
+    st.session_state.hotspot_t = 150.0
+if 'presion_sistema' not in st.session_state:
+    st.session_state.presion_sistema = 1.0
+if 'nitroxeno_acumulado' not in st.session_state:
+    st.session_state.nitroxeno_acumulado = 0.0
 
 # Variables de simulación P&ID
 if 'pid_sim' not in st.session_state:
