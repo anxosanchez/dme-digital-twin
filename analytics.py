@@ -209,6 +209,10 @@ class ProcessAnalytics:
         # para pechar o balance teórico no dashboard de xeito didáctico, ou simplemente o deixamos
         # calculado como global
         
+        c_out = c_out_dme
+        h_out = h_out_dme + h_out_h2o
+        o_out = o_out_dme + o_out_h2o
+        
         # Convertir a kmol/h atómico para peche estrito
         c_in_k = c_in / 12.011
         h_in_k = h_in / 1.008
