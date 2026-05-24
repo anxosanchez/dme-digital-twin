@@ -315,7 +315,7 @@ with tab_analytics:
     
     with col_table_left:
         st.markdown("#### Balance de Materia Global por Correntes")
-        st.dataframe(df_mass, use_container_width=True, hide_index=True)
+        st.table(df_mass.set_index("Corrente"))
         
         total_in = df_mass[df_mass["Tipo"] == "Entrada"]["Caudal (kg/h)"].sum()
         total_out = df_mass[df_mass["Tipo"] == "Saída"]["Caudal (kg/h)"].sum() + df_mass[df_mass["Tipo"] == "Inventario"]["Caudal (kg/h)"].sum()
@@ -325,7 +325,7 @@ with tab_analytics:
         
     with col_table_right:
         st.markdown("#### Balance Elemental por Especies")
-        st.dataframe(df_elem, use_container_width=True, hide_index=True)
+        st.table(df_elem.set_index("Especie Elemental"))
 
 if st.session_state.is_running:
     time.sleep(1.0)
