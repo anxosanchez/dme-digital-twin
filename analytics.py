@@ -272,6 +272,10 @@ class ProcessAnalytics:
             "Acumulado (kmol/h)": [c_acc_k, h_acc_k, o_acc_k, n_acc_k]
         })
         
+        # Formatar explicitamente a strings para evitar que Streamlit oculte os decimais ou deixe a cela en branco
+        for col in df_elem.columns[1:]:
+            df_elem[col] = df_elem[col].apply(lambda x: f"{x:.2f}")
+        
         return df_mass, df_elem
 
 if __name__ == "__main__":
