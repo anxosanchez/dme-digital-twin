@@ -90,15 +90,14 @@ class RecycleSplitter:
         # Se a presión do sistema ou inventario sobe moito, aumenta a purga.
         self.pid_purge = PIDController(Kp=0.5, Ki=0.05, Kd=0.0, Ts=2.0, action_type="direct", name="PIC-Splitter")
         self.split_fraction = target_split
+        # Novo PID de composición para Nitróxeno
+        self.pid_n2 = PIDController(Kp=1.0, Ki=0.05, Kd=0.0, Ts=2.0, action_type="direct", u_min=-0.15, u_max=0.15, name="AIC-N2")
 
     def split(self, feed_mol_h, system_pressure=10.0):
         """
-        Recircula unha fracción ao reactor, purga o resto.
+        Recircula unha fracción ao reactor, purga o resto. (Lóxica baseada en presión)
         """
-        # A purga ábrese máis se a presión do sistema sube (simulando inventario crecente)
         purge_valve = self.pid_purge.compute(sp=10.0, pv=system_pressure)
-        # Purga por defecto: 1 - target_split (ex. 0.25)
-        # purge_valve axusta isto
         purge_fraction = (1.0 - self.target_split) + (purge_valve - 0.5) * 0.2
         purge_fraction = np.clip(purge_fraction, 0.01, 0.99)
         self.split_fraction = 1.0 - purge_fraction
@@ -107,6 +106,34 @@ class RecycleSplitter:
         purge = feed_mol_h * purge_fraction
         
         return recycle, purge
+
+    def split_dynamic_purge(self, feed_mol_h, n2_in_mol_h):
+        """
+        Calcula a purga baseada no balance estrito de N2 para estabilizar en 18.54% (Mitigación do Snowball Effect)
+        """
+        total_feed = np.sum(feed_mol_h)
+        if total_feed > 0:
+            y_N2 = feed_mol_h[6] / total_feed
+        else:
+            y_N2 = 0.0
+            
+        # Fracción base necesaria para purgar os moles exactos que entraron con este paso temporal
+        if feed_mol_h[6] > 1e-5:
+            f_purge_base = n2_in_mol_h / feed_mol_h[6]
+        else:
+            f_purge_base = 0.25
+            
+        # Controlador para asegurar a calibración arredor do set point (0.1854)
+        purge_adj = self.pid_n2.compute(sp=0.1854, pv=y_N2)
+        
+        purge_fraction = f_purge_base + purge_adj
+        purge_fraction = np.clip(purge_fraction, 0.001, 0.999)
+        self.split_fraction = 1.0 - purge_fraction
+        
+        recycle = feed_mol_h * self.split_fraction
+        purge = feed_mol_h * purge_fraction
+        
+        return recycle, purge, y_N2
 
 
 class DistillationColumn:

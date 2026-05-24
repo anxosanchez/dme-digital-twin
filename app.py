@@ -131,6 +131,7 @@ if st.sidebar.button("🔄 RESET", use_container_width=True):
     st.session_state.caudal_dme = 0.00
     st.session_state.hotspot_t = 150.0
     st.session_state.presion_sistema = 1.0
+    st.session_state.nitroxeno_acumulado = 0.0
     st.session_state.pid_sim = {'time': [], 'T_gasifier': [], 'R_recycle': []}
     st.rerun()
 
@@ -155,7 +156,8 @@ if st.sidebar.button("💾 Aplicar Feedstock", use_container_width=True):
 
 # Lóxica dinámica de simulación
 if st.session_state.is_running:
-    engine.simulation_step()
+    res = engine.simulation_step()
+    st.session_state.nitroxeno_acumulado = res.get("y_N2", 0.0) * 100.0
     
     # Alimentar o histórico do P&ID
     current_time = engine.t
@@ -194,13 +196,16 @@ if 'hotspot_t' not in st.session_state:
     st.session_state.hotspot_t = 150.0
 if 'presion_sistema' not in st.session_state:
     st.session_state.presion_sistema = 1.0
+if 'nitroxeno_acumulado' not in st.session_state:
+    st.session_state.nitroxeno_acumulado = 0.0
 
 kpi_dme_delta = "Activo" if st.session_state.is_running else "Parado"
 
-col1, col2, col3 = st.columns(3)
-col1.metric("Caudal de DME (D3-1 Cabeza)", f"{st.session_state.caudal_dme:.2f} kg/h", delta=kpi_dme_delta)
-col2.metric("Hotspot PFR Metanol (R2-1)", f"{st.session_state.hotspot_t:.1f} °C", delta=f"{st.session_state.hotspot_t - 150.0:.1f} °C vs base" if st.session_state.hotspot_t > 150 else "")
-col3.metric("Descarga do Compresor (K2-1)", f"{st.session_state.presion_sistema:.1f} bar", delta=f"{st.session_state.presion_sistema - 1.0:.1f} bar vs Atm" if st.session_state.presion_sistema > 1 else "")
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Caudal de DME", f"{st.session_state.caudal_dme:.2f} kg/h", delta=kpi_dme_delta)
+col2.metric("Hotspot Metanol", f"{st.session_state.hotspot_t:.1f} °C", delta=f"{st.session_state.hotspot_t - 150.0:.1f} °C" if st.session_state.hotspot_t > 150 else "")
+col3.metric("K2-1 Descarga", f"{st.session_state.presion_sistema:.1f} bar", delta=f"{st.session_state.presion_sistema - 1.0:.1f} bar" if st.session_state.presion_sistema > 1 else "")
+col4.metric("Acumulación N2", f"{st.session_state.nitroxeno_acumulado:.2f} %", delta="SP: 18.54 %" if st.session_state.is_running else "")
 
 st.markdown("---")
 

@@ -182,13 +182,12 @@ class DigitalTwinEngine:
         vapor_f21, liquid_f21 = self.flash2_1.compute_separation(meoh_out_mol_h)
         self.flash2_1.step_level(liquid_f21, self.dt)
         
-        # Divisor de Reciclo SPT2-1 (Snowball mitigation)
-        # Actualizamos presión de sistema ficticia en base á cantidade de vapor acumulado
-        self.synthesis_pressure += (np.sum(vapor_f21) - np.sum(self.recycle_1_mol_h)) * 1e-4
-        self.synthesis_pressure = np.clip(self.synthesis_pressure, 5.0, 15.0)
+        # Divisor de Reciclo SPT2-1 (Snowball mitigation via compositional purge)
+        air_mol_h = (self.air_feed_kgh / 28.84) * 1000.0
+        n2_in_mol_h = air_mol_h * 0.79
         
-        recycle_gas, purge_gas = self.splitter.split(vapor_f21, self.synthesis_pressure)
-        # Actualizar a variable de estado do reciclo (con pequeno atraso dinámico ou directamente)
+        recycle_gas, purge_gas, self.y_N2_current = self.splitter.split_dynamic_purge(vapor_f21, n2_in_mol_h)
+        # Actualizar a variable de estado do reciclo
         self.recycle_1_mol_h = recycle_gas
         
         # Flash F2-2 (Líquido baixa de 10 a 2.6 bar)
@@ -265,6 +264,7 @@ class DigitalTwinEngine:
             "T_max_meoh": T_last - 273.15,
             "P_system": self.synthesis_pressure,
             "recycle_1_ratio": self.splitter.split_fraction,
+            "y_N2": getattr(self, "y_N2_current", 0.0),
             "DME_production": top_d31[5] * 46.07 / 1000.0, # kg/h DME (MW aprox 46)
             "MeOH_recycle_2": np.sum(self.recycle_2_mol_h),
         }
