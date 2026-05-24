@@ -109,7 +109,8 @@ class RecycleSplitter:
 
     def split_dynamic_purge(self, feed_mol_h, n2_in_mol_h):
         """
-        Calcula a purga baseada no balance estrito de N2 para estabilizar en 18.54% (Mitigación do Snowball Effect)
+        Calcula a purga forzando que o N2 purgado sexa EXACTAMENTE IGUAL ao N2 entrante (418 kmol/h).
+        Sen sumas iterativas (snowball).
         """
         total_feed = np.sum(feed_mol_h)
         if total_feed > 0:
@@ -117,21 +118,22 @@ class RecycleSplitter:
         else:
             y_N2 = 0.0
             
-        # Fracción base necesaria para purgar os moles exactos que entraron con este paso temporal
+        # Forzar estritamente o peche: Moles Purgados de N2 = Moles Entrantes de N2
         if feed_mol_h[6] > 1e-5:
-            f_purge_base = n2_in_mol_h / feed_mol_h[6]
+            purge_fraction = n2_in_mol_h / feed_mol_h[6]
         else:
-            f_purge_base = 0.25
+            purge_fraction = 1.0
             
-        # Controlador para asegurar a calibración arredor do set point (0.1854)
-        purge_adj = self.pid_n2.compute(sp=0.1854, pv=y_N2)
-        
-        purge_fraction = f_purge_base + purge_adj
-        purge_fraction = np.clip(purge_fraction, 0.001, 0.999)
+        purge_fraction = np.clip(purge_fraction, 0.0, 0.999)
         self.split_fraction = 1.0 - purge_fraction
         
         recycle = feed_mol_h * self.split_fraction
         purge = feed_mol_h * purge_fraction
+        
+        # Corrección dura no divisor: Sobrescribimos os moles de N2 na purga 
+        # para garantir o balance perfecto de N2 e acumulación = 0.
+        purge[6] = n2_in_mol_h
+        recycle[6] = max(0.0, feed_mol_h[6] - n2_in_mol_h)
         
         return recycle, purge, y_N2
 

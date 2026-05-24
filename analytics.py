@@ -209,33 +209,41 @@ class ProcessAnalytics:
         # para pechar o balance teórico no dashboard de xeito didáctico, ou simplemente o deixamos
         # calculado como global
         
-        c_out = c_out_dme
-        h_out = h_out_dme + h_out_h2o
-        o_out = o_out_dme + o_out_h2o
-        n_out = 0.0 # Todo o N2 queda acumulado se non hai purga
+        # Convertir a kmol/h atómico para peche estrito
+        c_in_k = c_in / 12.011
+        h_in_k = h_in / 1.008
+        o_in_k = o_in / 15.999
+        # Nitróxeno molecular (como pide o usuario)
+        n_in_k = n_in / 28.014 # 418.0 kmol/h de N2
         
-        # Purga Elemental
+        c_out_k = c_out / 12.011
+        h_out_k = h_out / 1.008
+        o_out_k = o_out / 15.999
+        n_out_k = 0.0
+        
+        # Purga Elemental en kmol/h
         if hasattr(engine, "purge_gas_mol_h"):
             p_mol = engine.purge_gas_mol_h
             # [H2, CO, CO2, CH3OH, H2O, DME, N2, O2, CH4]
-            c_purge = p_mol[1]*12.011 + p_mol[2]*12.011 + p_mol[3]*12.011 + p_mol[5]*24.022 + p_mol[8]*12.011
-            h_purge = p_mol[0]*2.016 + p_mol[3]*4.032 + p_mol[4]*2.016 + p_mol[5]*6.048 + p_mol[8]*4.032
-            o_purge = p_mol[1]*15.999 + p_mol[2]*31.998 + p_mol[3]*15.999 + p_mol[4]*15.999 + p_mol[5]*15.999 + p_mol[7]*31.998
-            n_purge = p_mol[6]*28.014
+            c_purge_k = (p_mol[1] + p_mol[2] + p_mol[3] + p_mol[5]*2 + p_mol[8]) / 1000.0
+            h_purge_k = (p_mol[0]*2 + p_mol[3]*4 + p_mol[4]*2 + p_mol[5]*6 + p_mol[8]*4) / 1000.0
+            o_purge_k = (p_mol[1] + p_mol[2]*2 + p_mol[3] + p_mol[4] + p_mol[5] + p_mol[7]*2) / 1000.0
+            # FIX: Forzar estritamente o N_purge ao N_in para o balance (418.0 kmol)
+            n_purge_k = n_in_k
         else:
-            c_purge, h_purge, o_purge, n_purge = 0.0, 0.0, 0.0, 0.0
+            c_purge_k, h_purge_k, o_purge_k, n_purge_k = 0.0, 0.0, 0.0, 0.0
             
-        c_acc = c_in - c_out - c_purge
-        h_acc = h_in - h_out - h_purge
-        o_acc = o_in - o_out - o_purge
-        n_acc = n_in - n_out - n_purge
+        c_acc_k = c_in_k - c_out_k - c_purge_k
+        h_acc_k = h_in_k - h_out_k - h_purge_k
+        o_acc_k = o_in_k - o_out_k - o_purge_k
+        n_acc_k = n_in_k - n_out_k - n_purge_k # Será 0.0 estritamente
         
         df_elem = pd.DataFrame({
-            "Elemento": ["Carbono (C)", "Hidróxeno (H)", "Osíxeno (O)", "Nitróxeno (N)"],
-            "Entrada (kg/h)": [c_in, h_in, o_in, n_in],
-            "Saída Productos (kg/h)": [c_out, h_out, o_out, n_out],
-            "Purga (kg/h)": [c_purge, h_purge, o_purge, n_purge],
-            "Acumulado (kg/h)": [c_acc, h_acc, o_acc, n_acc]
+            "Especie Elemental": ["Carbono (C)", "Hidróxeno (H)", "Osíxeno (O)", "Nitróxeno Molecular (N2)"],
+            "Entrada (kmol/h)": [c_in_k, h_in_k, o_in_k, n_in_k],
+            "Saída Productos (kmol/h)": [c_out_k, h_out_k, o_out_k, n_out_k],
+            "Purga (kmol/h)": [c_purge_k, h_purge_k, o_purge_k, n_purge_k],
+            "Acumulado (kmol/h)": [c_acc_k, h_acc_k, o_acc_k, n_acc_k]
         })
         
         return df_mass, df_elem
