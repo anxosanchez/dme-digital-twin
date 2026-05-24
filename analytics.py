@@ -15,6 +15,26 @@ class ProcessAnalytics:
         self.output_dir = "analytics_output"
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
+            
+        # Configuración de estilo moderno (DCS dark theme)
+        plt.style.use('dark_background')
+        plt.rcParams.update({
+            'figure.facecolor': '#0e1117',
+            'axes.facecolor': '#0e1117',
+            'axes.edgecolor': '#2d333b',
+            'axes.labelcolor': '#c9d1d9',
+            'text.color': '#c9d1d9',
+            'xtick.color': '#8b949e',
+            'ytick.color': '#8b949e',
+            'grid.color': '#2d333b',
+            'grid.alpha': 0.5,
+            'grid.linestyle': '--',
+            'axes.titlecolor': '#e6edf3',
+            'axes.titleweight': 'bold',
+            'legend.facecolor': '#161b22',
+            'legend.edgecolor': '#2d333b',
+            'axes.prop_cycle': plt.cycler(color=['#00ffcc', '#ff4b4b', '#007bff', '#ffcc00', '#ff00ff', '#bd93f9'])
+        })
 
     def plot_pfr_profiles(self, engine):
         """
@@ -47,14 +67,15 @@ class ProcessAnalytics:
         
         plt.figure(figsize=(10, 6))
         for name, idx in comp_indices.items():
-            plt.plot(z_points, w_profiles[:, idx], marker='o', label=name)
+            plt.plot(z_points, w_profiles[:, idx], marker='o', linewidth=2.5, markersize=6, label=name)
             
         plt.title("Perfil Axial no Reactor PFR de Metanol")
         plt.xlabel("Lonxitude do Tubo z (m)")
         plt.ylabel("Fracción Másica ($w_i$)")
         plt.legend()
-        plt.grid(True, linestyle='--', alpha=0.7)
+        plt.grid(True)
         fig = plt.gcf()
+        fig.tight_layout()
         return fig
 
     def plot_gasifier_sensitivity(self, engine):
@@ -108,20 +129,18 @@ class ProcessAnalytics:
         # Figura 1: Fraccións másicas
         fig, ax1 = plt.subplots(figsize=(10, 6))
         
-        ax1.plot(temperatures_C, w_H2, 'b-', label='$H_2$')
-        ax1.plot(temperatures_C, w_CO, 'r-', label='$CO$')
-        ax1.plot(temperatures_C, w_CO2, 'g-', label='$CO_2$')
+        ax1.plot(temperatures_C, w_H2, linewidth=2.5, label='$H_2$')
+        ax1.plot(temperatures_C, w_CO, linewidth=2.5, label='$CO$')
+        ax1.plot(temperatures_C, w_CO2, linewidth=2.5, label='$CO_2$')
         ax1.set_xlabel("Temperatura do Gasificador ($^\circ$C)")
-        ax1.set_ylabel("Fracción Másica do Gas de Síntese", color='k')
-        ax1.tick_params(axis='y', labelcolor='k')
+        ax1.set_ylabel("Fracción Másica do Gas de Síntese")
         ax1.legend(loc='upper left')
-        ax1.grid(True, linestyle='--', alpha=0.7)
+        ax1.grid(True)
         
         # Figura 2: Carbono sólido no eixe xemelgo
         ax2 = ax1.twinx()
-        ax2.plot(temperatures_C, C_solid, 'k--', linewidth=2, label='Carbono Sólido Residual ($C_{(s)}$)')
-        ax2.set_ylabel("Caudal Másico $C_{(s)}$ (kg/h)", color='k')
-        ax2.tick_params(axis='y', labelcolor='k')
+        ax2.plot(temperatures_C, C_solid, color='#8b949e', linestyle='--', linewidth=2.5, label='Carbono Sólido Residual ($C_{(s)}$)')
+        ax2.set_ylabel("Caudal Másico $C_{(s)}$ (kg/h)")
         ax2.legend(loc='upper right')
         
         plt.title("Sensibilidade Térmica da Gasificación (Minimización de Gibbs)")
