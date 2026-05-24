@@ -216,9 +216,9 @@ kpi_dme_delta = "Activo" if st.session_state.is_running else "Parado"
 
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("Caudal de DME", f"{st.session_state.caudal_dme:.2f} kg/h", delta=kpi_dme_delta)
-col2.metric("Hotspot Metanol", f"{st.session_state.hotspot_t:.1f} °C", delta=f"{st.session_state.hotspot_t - 150.0:.1f} °C" if st.session_state.hotspot_t > 150 else "")
-col3.metric("K2-1 Descarga", f"{st.session_state.presion_sistema:.1f} bar", delta=f"{st.session_state.presion_sistema - 1.0:.1f} bar" if st.session_state.presion_sistema > 1 else "")
-col4.metric("Acumulación N2", f"{st.session_state.nitroxeno_acumulado:.2f} %", delta="SP: 18.54 %" if st.session_state.is_running else "")
+col2.metric("Hotspot Metanol", f"{st.session_state.hotspot_t:.1f} °C", delta=f"{st.session_state.hotspot_t - 150.0:.1f} °C" if st.session_state.hotspot_t > 150 else None)
+col3.metric("K2-1 Descarga", f"{st.session_state.presion_sistema:.1f} bar", delta=f"{st.session_state.presion_sistema - 1.0:.1f} bar" if st.session_state.presion_sistema > 1 else None)
+col4.metric("Acumulación N2", f"{st.session_state.nitroxeno_acumulado:.2f} %", delta="SP: 18.54 %" if st.session_state.is_running else None)
 
 st.markdown("---")
 
