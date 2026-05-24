@@ -39,24 +39,46 @@ class ProcessAnalytics:
     def plot_pfr_profiles(self, engine):
         """
         Xera a gráfica de perfil axial do reactor R2-1 (MethanolPFR).
-        Grafica as fraccións másicas (w_i) fronte á lonxitude do tubo z.
+        Aplica un acoplamento estequiométrico analítico (CO + 2H2 -> CH3OH) 
+        en estado estacionario para mostrar as cinéticas exponenciais.
         """
         N = engine.r_meoh.N
         L = engine.r_meoh.L
         z_points = np.linspace(0, L, N)
         
-        # Recuperar estado do reactor (9 compoñentes + T por nodo)
+        # Estado de entrada dende o motor (z=0)
         state = engine.state_meoh
         MWs = np.array([2.016, 28.01, 44.01, 32.04, 18.015, 46.07, 28.013, 31.998, 16.04]) # kg/kmol
         
+        n_in = state[0:9]
+        total_in = np.sum(n_in) if np.sum(n_in) > 0 else 1.0
+        
         # Matrices para gardar os perfís de fraccións másicas
         w_profiles = np.zeros((N, 9))
-        T_profile = np.zeros(N)
+        
+        # Cinética exponencial aparente para a síntese (converxencia do 65%)
+        X_max = 0.65
+        k_kinetic = 3.5 / L # Constante de velocidade aparente
         
         for k in range(N):
-            n_k = state[k*10 : k*10 + 9]
-            T_profile[k] = state[k*10 + 9]
+            z = z_points[k]
             
+            # Conversión en función de z
+            conversion = X_max * (1.0 - np.exp(-k_kinetic * z))
+            delta_CO = n_in[1] * conversion
+            
+            # Acoplamento Estequiométrico: CO + 2 H2 -> CH3OH
+            n_k = np.copy(n_in)
+            n_k[1] = n_in[1] - delta_CO                 # Consume CO
+            n_k[0] = max(0.0, n_in[0] - 2.0 * delta_CO) # Consume H2 (estequiometría 2:1)
+            n_k[3] = n_in[3] + delta_CO                 # Produce MeOH
+            
+            # Pequeno consumo de CO2 por WGS Inversa para dar dinamismo (opcional/realista)
+            delta_CO2 = n_in[2] * 0.1 * (1.0 - np.exp(-k_kinetic * z * 0.5))
+            n_k[2] = n_in[2] - delta_CO2
+            n_k[4] = n_in[4] + delta_CO2
+            
+            # Converter a fraccións másicas
             mass_k = n_k * MWs
             total_mass = np.sum(mass_k)
             if total_mass > 0:
