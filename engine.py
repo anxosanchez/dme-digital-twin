@@ -189,6 +189,7 @@ class DigitalTwinEngine:
         recycle_gas, purge_gas, self.y_N2_current = self.splitter.split_dynamic_purge(vapor_f21, n2_in_mol_h)
         # Actualizar a variable de estado do reciclo
         self.recycle_1_mol_h = recycle_gas
+        self.purge_gas_mol_h = purge_gas
         
         # Flash F2-2 (Líquido baixa de 10 a 2.6 bar)
         vapor_f22, liquid_f22 = self.flash2_2.compute_separation(liquid_f21)
