@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="gl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xemelo Dixital: Planta de Síntese de DME</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-logo">
+            <div class="logo-pulse"></div>
+            <h1>DME Digital Twin</h1>
+            <span class="badge">V1.0 - SIMULACIÓN DINÁMICA</span>
+        </div>
+        <div class="simulation-controls">
+            <button id="btn-play" class="btn btn-success">
+                <svg class="icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                Iniciar
+            </button>
+            <button id="btn-pause" class="btn btn-warning" disabled>
+                <svg class="icon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                Pausar
+            </button>
+            <button id="btn-step-multi" class="btn btn-info">
+                <svg class="icon" viewBox="0 0 24 24"><polygon points="12 5 19 12 12 19 12 5"></polygon><polygon points="5 5 12 12 5 19 5 5"></polygon></svg>
+                +10s
+            </button>
+            <button id="btn-reset" class="btn btn-danger">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+                Reset
+            </button>
+        </div>
+    </header>
+
+    <main class="app-container">
+        <!-- Panel Lateral Izquierdo: Estado e Controis -->
+        <aside class="sidebar">
+            <!-- Sección 1: Monitores Dixitais -->
+            <section class="card status-card">
+                <h2>Sensores do Proceso</h2>
+                <div class="grid-status">
+                    <div class="status-widget">
+                        <span class="label">Tempo Simulado</span>
+                        <span id="txt-time" class="value">0 s</span>
+                    </div>
+                    <div class="status-widget">
+                        <span class="label">Presión Saída</span>
+                        <span id="txt-pressure" class="value">50.0 bar</span>
+                    </div>
+                    <div class="status-widget alert-trigger" id="widget-temp">
+                        <span class="label">Tª Máxima Reactor</span>
+                        <span id="txt-temp-max" class="value">250.0 °C</span>
+                    </div>
+                    <div class="status-widget highlight">
+                        <span class="label">Produción de DME</span>
+                        <span id="txt-dme-flow" class="value">0.00 mol/s</span>
+                    </div>
+                    <div class="status-widget">
+                        <span class="label">Apertura Válvula</span>
+                        <span id="txt-valve" class="value">40.0 %</span>
+                    </div>
+                    <div class="status-widget">
+                        <span class="label">Caudal Alimentación</span>
+                        <span id="txt-feed-flow" class="value">9.20 mol/s</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sección 2: Panel de Axustes e Perturbacións -->
+            <section class="card control-card">
+                <h2>Panel de Operación e Control</h2>
+                
+                <div class="control-group">
+                    <label for="select-mode">Modo de Control (Temperatura)</label>
+                    <div class="custom-select-wrapper">
+                        <select id="select-mode">
+                            <option value="PID">Controlador PID (Automático)</option>
+                            <option value="DMC">Controlador Predictivo DMC (MPC)</option>
+                            <option value="MANUAL">Control Manual (Operador)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="control-group" id="grp-setpoint">
+                    <div class="slider-header">
+                        <label for="slider-setpoint">Setpoint Temperatura Máxima</label>
+                        <span class="slider-val" id="val-setpoint">260.0 °C</span>
+                    </div>
+                    <input type="range" id="slider-setpoint" min="230" max="280" step="0.5" value="260">
+                </div>
+
+                <div class="control-group disabled" id="grp-coolant">
+                    <div class="slider-header">
+                        <label for="slider-coolant">Tª Refrixerante (Manual)</label>
+                        <span class="slider-val text-muted" id="val-coolant">240.0 °C</span>
+                    </div>
+                    <input type="range" id="slider-coolant" min="200" max="280" step="0.5" value="240" disabled>
+                </div>
+
+                <div class="control-group disturbance">
+                    <div class="slider-header">
+                        <label for="slider-disturbance">Perturbación Caudal de Entrada</label>
+                        <span class="slider-val text-orange" id="val-disturbance">0 %</span>
+                    </div>
+                    <input type="range" id="slider-disturbance" min="-30" max="30" step="1.0" value="0">
+                    <div class="slider-markers">
+                        <span>-30% (Fallo)</span>
+                        <span>0%</span>
+                        <span>+30% (Pico)</span>
+                    </div>
+                </div>
+
+                <button id="btn-apply-settings" class="btn btn-primary btn-block">
+                    Aplicar Cambios / Perturbacións
+                </button>
+            </section>
+        </aside>
+
+        <!-- Panel Central/Dereito: Gráficos de Comportamento Dinámico -->
+        <section class="charts-area">
+            <!-- Gráfico 1: Evolución Temporal -->
+            <div class="card chart-card">
+                <div class="chart-header">
+                    <h2>Evolución Dinámica do Proceso</h2>
+                    <span class="subtitle">Efecto das perturbacións e resposta do controlador en tempo real</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="chart-timeseries"></canvas>
+                </div>
+            </div>
+
+            <!-- Gráfico 2: Perfil Axial do Reactor -->
+            <div class="grid-reactor-charts">
+                <div class="card chart-card">
+                    <div class="chart-header">
+                        <h2>Perfil Axial de Temperatura (1D)</h2>
+                        <span class="subtitle">Distribución espacial ao longo do leito catalítico</span>
+                    </div>
+                    <div class="chart-container-sm">
+                        <canvas id="chart-profile-temp"></canvas>
+                    </div>
+                </div>
+
+                <div class="card chart-card">
+                    <div class="chart-header">
+                        <h2>Perfil de Composición (Gas)</h2>
+                        <span class="subtitle">Fraccións molares ao longo do reactor</span>
+                    </div>
+                    <div class="chart-container-sm">
+                        <canvas id="chart-profile-y"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="app-footer">
+        <p>Desenvolvido como parte do Framework de Xemelo Dixital dinámico de DME. Proceso integrado de DAEs ríxidas solved via BDF / Radau.</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
