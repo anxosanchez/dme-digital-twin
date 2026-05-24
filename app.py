@@ -147,12 +147,25 @@ s_val = st.sidebar.slider("Xofre (S)", 0.0, 100.0, 0.40, 0.01)
 ash_val = st.sidebar.slider("Cinzas", 0.0, 100.0, 12.09, 0.01)
 
 sum_comp = c_val + h_val + o_val + n_val + s_val + ash_val
-if abs(sum_comp - 100.0) > 0.1:
-    st.sidebar.warning(f"Suma: {sum_comp:.2f}%. Debe ser 100%.")
+
+# Normalización dinámica
+if sum_comp > 0:
+    c_norm = (c_val / sum_comp) * 100.0
+    h_norm = (h_val / sum_comp) * 100.0
+    o_norm = (o_val / sum_comp) * 100.0
+    n_norm = (n_val / sum_comp) * 100.0
+    s_norm = (s_val / sum_comp) * 100.0
+    ash_norm = (ash_val / sum_comp) * 100.0
+else:
+    c_norm, h_norm, o_norm, n_norm, s_norm, ash_norm = 100.0, 0.0, 0.0, 0.0, 0.0, 0.0
+
+if abs(sum_comp - 100.0) > 0.01:
+    st.sidebar.warning(f"Suma orixinal: {sum_comp:.1f}%. A matriz foi auto-normalizada ao 100.0%.")
+    st.sidebar.info(f"Matriz real: C:{c_norm:.1f}% | H:{h_norm:.1f}% | O:{o_norm:.1f}% | N:{n_norm:.2f}% | S:{s_norm:.2f}% | Cinzas:{ash_norm:.1f}%")
 
 if st.sidebar.button("💾 Aplicar Feedstock", use_container_width=True):
-    engine.feedstock.set_custom_composition(c_val/100.0, h_val/100.0, o_val/100.0, n_val/100.0, s_val/100.0, ash_val/100.0)
-    st.sidebar.success("Composición rexistrada.")
+    engine.feedstock.set_custom_composition(c_norm/100.0, h_norm/100.0, o_norm/100.0, n_norm/100.0, s_norm/100.0, ash_norm/100.0)
+    st.sidebar.success("Composición normalizada rexistrada no solver.")
 
 # Lóxica dinámica de simulación
 if st.session_state.is_running:
