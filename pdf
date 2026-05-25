@@ -1,0 +1,511 @@
+<h2
+id="informe-técnico-de-fundamentos-matemáticos-e-lóxica-de-control-para-o-xemelo-dixital-da-planta-de-síntese-de-dme.">Informe
+Técnico de Fundamentos Matemáticos e Lóxica de Control para o Xemelo
+Dixital da planta de síntese de DME.</h2>
+<p>Este documento desglosa as ecuacións gobernantes, os balances de
+materia e os algoritmos de control que sustentan o modelo matemático
+programado en Python, garantindo a súa coherencia termodinámica coa
+simulación base de Aspen Plus.</p>
+<h2 id="informe-matemático-do-xemelo-dixital-planta-dme">INFORME
+MATEMÁTICO DO XEMELO DIXITAL (PLANTA DME)</h2>
+<h3 id="módulo-i-front-end-e-gasificación">MÓDULO I: FRONT-END E
+GASIFICACIÓN</h3>
+<ul>
+<li><p>Unidade de Operación: Secadoiro (R1-1)</p></li>
+<li><p>Operación Unitaria: Reactor Estequiométrico (RStoic).</p></li>
+<li><p>Fundamento Matemático: Eliminación controlada de humidade baseada
+na fracción de conversión experimental (<span
+class="math inline"><em>ξ</em> = 0.117</span>).</p></li>
+<li><p>Ecuación de Balance:</p></li>
+</ul>
+<p><span class="math display"><em>m</em><sub>Biomasa,
+Seca</sub> = <em>m</em><sub>Biomasa,
+Bruta</sub> ⋅ (1 − <em>X</em><sub>H2O,
+inicial</sub> ⋅ <em>ξ</em>)</span></p>
+<p><span class="math display"><em>m</em><sub>Auga,
+Vapor</sub> = <em>m</em><sub>Biomasa, Bruta</sub> ⋅ <em>X</em><sub>H2O,
+inicial</sub> ⋅ <em>ξ</em></span></p>
+<ul>
+<li><p>Unidade de Operación: Reactor de Pirólise (R1-2)</p></li>
+<li><p>Operación Unitaria: Reactor de Rendemento (RYield).</p></li>
+<li><p>Fundamento Matemático: Descomposición da estrutura complexa da
+biomasa nos seus compoñentes elementais (<span
+class="math inline"><em>C</em>, <em>H</em>, <em>O</em>, <em>N</em>, <em>S</em>, Cinzas</span>)
+a partir da matriz de caracterización normalizada:</p></li>
+</ul>
+<p><span
+class="math display">∑<em>X</em><sub><em>i</em></sub> = <em>X</em><sub><em>C</em></sub> + <em>X</em><sub><em>H</em></sub> + <em>X</em><sub><em>O</em></sub> + <em>X</em><sub><em>N</em></sub> + <em>X</em><sub><em>S</em></sub> + <em>X</em><sub>Ash</sub> = 1.00  (100%)</span></p>
+<ul>
+<li>Fluxo de Especies:</li>
+</ul>
+<p><span class="math display"><em>F</em><sub><em>i</em></sub>
+(kg/h) = <em>m</em><sub>Biomasa,
+Seca</sub> ⋅ <em>X</em><sub><em>i</em></sub></span></p>
+<ul>
+<li><p>Unidade de Operación: Gasificador (R1-3)</p></li>
+<li><p>Operación Unitaria: Reactor de Equilibrio de Gibbs
+(RGibbs).</p></li>
+<li><p>Fundamento Matemático: Minimización da Enerxía Libre de Gibbs
+(<span class="math inline"><em>G</em><sub>total</sub></span>) do sistema
+para un espazo multifase (Gas + Sólido) a 750°C e 1 bar.</p></li>
+<li><p>Ecuación de Optimización:</p></li>
+</ul>
+<p><span
+class="math display">min (<em>G</em><sub>total</sub>) = min (∑<sub><em>i</em></sub><em>n</em><sub><em>i</em></sub> ⋅ <em>μ</em><sub><em>i</em></sub>)</span></p>
+<p>Onde <span class="math inline">$\mu_i = \mu_i^\circ + R \cdot T \cdot
+\ln\left(\frac{f_i}{f_i^\circ}\right)$</span> é o potencial químico da
+especie <span class="math inline"><em>i</em></span>, e <span
+class="math inline"><em>n</em><sub><em>i</em></sub></span> son os moles.
+O sistema resolve os equilibrios simultáneos das reaccións de Boudouard,
+reformado con vapor e Water-Gas Shift (WGS).</p>
+<h3 id="módulo-ii-compresión-e-síntese-de-metanol">MÓDULO II: COMPRESIÓN
+E SÍNTESE DE METANOL</h3>
+<ul>
+<li><p>Unidade de Operación: Compresor Multietapa (K2-1)</p></li>
+<li><p>Operación Unitaria: Compresión Isentrópica con arrefriamento
+intermedio (5 etapas).</p></li>
+<li><p>Fundamento Matemático: O ratio de compresión por etapa (<span
+class="math inline"><em>r</em></span>) está limitado a un máximo de 3
+(<span class="math inline"><em>r</em> ≤ 3</span>) para evitar un
+sobrequentamento mecánico.</p></li>
+<li><p>Traballo de Compresión (<span
+class="math inline"><em>W</em><sub><em>c</em></sub></span>):</p></li>
+</ul>
+<p><span class="math display">$$
+W_c = \sum_{j=1}^{5} \dot{m} \cdot C_p \cdot T_{\text{in, } j} \cdot
+\left[ \left( \frac{P_{\text{out, } j}}{P_{\text{in, } j}}
+\right)^{\frac{\gamma - 1}{\gamma}} - 1 \right] \cdot \frac{1}{\eta_c}
+$$</span></p>
+<p>Onde <span class="math inline">$\gamma = \frac{C_p}{C_v}$</span> é o
+coeficiente adiabático do Syngas e <span
+class="math inline"><em>η</em><sub><em>c</em></sub></span> é a
+eficiencia isentrópica.</p>
+<ul>
+<li><p>Unidade de Operación: Reactor de Metanol (R2-1)</p></li>
+<li><p>Operación Unitaria: Reactor de Fluxo de Pistón (PFR)
+Multitubular.</p></li>
+<li><p>Fundamento Matemático: Perfil axial gobernado pola cinética
+heteroxénea tipo</p></li>
+<li><p>Langmuir-Hinshelwood-Hougen-Watson (LHHW) para a hidroxenación de
+<span class="math inline"><em>C</em><em>O</em></span> e <span
+class="math inline"><em>C</em><em>O</em><sub>2</sub></span>.</p></li>
+<li><p>Ecuacións Diferenciais de Perfil Axial (<span
+class="math inline"><em>z</em></span>):</p></li>
+</ul>
+<p><span class="math display">$$
+\frac{dF_{CO}}{dz} = -A_t \cdot \rho_b \cdot r_1
+$$</span></p>
+<p><span class="math display">$$
+\frac{dF_{CO2}}{dz} = -A_t \cdot \rho_b \cdot r_2
+$$</span></p>
+<p><span class="math display">$$
+\frac{dF_{CH3OH}}{dz} = A_t \cdot \rho_b \cdot (r_1 + r_2)
+$$</span></p>
+<ul>
+<li>Expresións Cinéticas (LHHW Axustadas):</li>
+</ul>
+<p><span class="math display">$$
+r_1 = \frac{k_1 \cdot K_{CO} \cdot (P_{CO} \cdot P_{H2}^2 - P_{CH3OH} /
+K_{eq,1})}{(1 + K_{CO} \cdot P_{CO} + K_{H2} \cdot P_{H2})^3}
+$$</span></p>
+<p>O acoplamento estequiométrico obriga a que por cada mol de <span
+class="math inline"><em>C</em><em>O</em></span> consumido, desatézase o
+perfil de <span class="math inline"><em>H</em><sub>2</sub></span> cun
+gradiente de dobre pendente (<span
+class="math inline"><em>Δ</em><em>F</em><sub><em>H</em>2</sub> = 2 ⋅ <em>Δ</em><em>F</em><sub><em>C</em><em>O</em></sub></span>).</p>
+<h3 id="módulo-iii-separación-e-lazo-de-reciclo-i">MÓDULO III:
+SEPARACIÓN E LAZO DE RECICLO I</h3>
+<ul>
+<li><p>Unidade de Operación: Divisor de Fluxo / Purga (SPT2-1)</p></li>
+<li><p>Operación Unitaria: Splitter de Reciclo Crítico.</p></li>
+<li><p>Fundamento Matemático: Control estrito do balance de inertes para
+evitar o efecto “bóla de neve” do Nitróxeno (<span
+class="math inline"><em>N</em><sub>2</sub></span>).</p></li>
+<li><p>Balance de Materia sen Acumulación:</p></li>
+</ul>
+<p><span class="math display"><em>F</em><sub><em>N</em>2, 
+entrada</sub> = <em>F</em><sub><em>N</em>2,  purga</sub> = 418.0
+kmol/h</span></p>
+<p><span class="math display">$$
+F_{N2, \text{ reciclo}} = F_{N2, \text{ entrada}} \cdot \left(
+\frac{R}{1 - R} \right) \quad \text{onde } R = 0.75 \text{ (75\% de
+reciclo)}
+$$</span></p>
+<ul>
+<li>A masa total pecha cun erro do 0.00% ao forzar que a acumulación
+neta de inertes no estado estacionario sexa:</li>
+</ul>
+<p><span class="math display">$$
+\frac{dn_{N2, \text{ sistema}}}{dt} = 0.0 \text{ kmol/h}
+$$</span></p>
+<h3 id="módulo-iv-e-v-síntese-e-purificación-de-dme">MÓDULO IV E V:
+SÍNTESE E PURIFICACIÓN DE DME</h3>
+<ul>
+<li><p>Unidade de Operación: Reactor de DME (R3-1)</p></li>
+<li><p>Operación Unitaria: Reactor de Equilibrio Estequiométrico
+(REquil).</p></li>
+<li><p>Fundamento Matemático: Deshidratación catalítica do metanol en
+fase vapor (<span
+class="math inline">2 <em>C</em><em>H</em><sub>3</sub><em>O</em><em>H</em> ⇌ <em>D</em><em>M</em><em>E</em> + <em>H</em><sub>2</sub><em>O</em></span>).</p></li>
+<li><p>Constante de Equilibrio (<span
+class="math inline"><em>K</em><sub><em>e</em><em>q</em>, <em>D</em><em>M</em><em>E</em></sub></span>):</p></li>
+</ul>
+<p><span class="math display">$$
+K_{eq, DME}(T) = \exp \left( \frac{-\Delta H^\circ}{R \cdot T} +
+\frac{\Delta S^\circ}{R} \right) = \frac{P_{DME} \cdot
+P_{H2O}}{P_{CH3OH}^2}
+$$</span></p>
+<ul>
+<li><p>Unidade de Operación: Columnas de Destilación (D3-1 e
+D3-2)</p></li>
+<li><p>Operación Unitaria: Modelo de Pratos Fraccionados (RadFrac /
+MESH).</p></li>
+<li><p>Fundamento Matemático: Ecuacións de balance en cada prato <span
+class="math inline"><em>j</em></span> (Masa, Equilibrio Líquido-Vapor,
+Sumatorio de fraccións, Entalpía).</p></li>
+<li><p>Equilibrio de Fases (Lei de Raoult Modificada):</p></li>
+</ul>
+<p><span
+class="math display"><em>y</em><sub><em>i</em></sub> ⋅ <em>P</em> = <em>x</em><sub><em>i</em></sub> ⋅ <em>γ</em><sub><em>i</em></sub> ⋅ <em>P</em><sub><em>i</em></sub><sup>sat</sup>(<em>T</em>)</span></p>
+<p>Onde os coeficientes de actividade (<span
+class="math inline"><em>γ</em><sub><em>i</em></sub></span>) calcúlanse
+mediante o modelo UNIFAC/UNIQUAC incorporado no motor matemático,
+garantindo unha pureza na corrente de cabeza de D3-1 de:</p>
+<p><span
+class="math display"><em>y</em><sub><em>D</em><em>M</em><em>E</em></sub> ≥ 0.9990  (99.90%)</span></p>
+<h2 id="informe-dos-lazos-de-control-pid">INFORME DOS LAZOS DE CONTROL
+(P&amp;ID)</h2>
+<p>O comportamento dinámico das unidades está gobernado por algoritmos
+de control realimentado PID en tempo continuo, discretizados mediante o
+método de Euler para o paso de tempo <span
+class="math inline"><em>d</em><em>t</em></span>.</p>
+<h3 id="algoritmo-xeral-do-controlador-pid">Algoritmo Xeral do
+Controlador PID</h3>
+<p>A variable de saída do controlador (apertura da válvula de control,
+<span class="math inline"><em>M</em><em>V</em>(<em>t</em>)</span>)
+calcúlase en función do erro detectado (<span
+class="math inline"><em>e</em>(<em>t</em>) = <em>S</em><em>P</em> − <em>P</em><em>V</em></span>):</p>
+<p><span class="math display">$$
+MV(t) = K_p \cdot e(t) + K_i \sum_{0}^{t} e(t) \cdot dt + K_d \cdot
+\frac{e(t) - e(t-dt)}{dt}
+$$</span></p>
+<h3 id="desglose-de-lazos-de-control-sintonizados">Desglose de Lazos de
+Control Sintonizados</h3>
+<ul>
+<li><p>Tag do Lazo</p></li>
+<li><p>Variable Proceso (PV)</p></li>
+<li><p>Variable Motor (MV)</p></li>
+<li><p>SetPoint (SP)</p></li>
+<li><p>Acción</p></li>
+<li><p>Parámetros Sintonizados</p></li>
+<li><p>TIC-01</p></li>
+<li><p>Temperatura Gasificador</p></li>
+<li><p>Caudal de Aire inxectado 750.0°C</p></li>
+<li><p>Directa <span
+class="math inline"><em>K</em><sub><em>p</em></sub> = 1.8</span>, <span
+class="math inline"><em>K</em><sub><em>i</em></sub> = 0.05</span>, <span
+class="math inline"><em>K</em><sub><em>d</em></sub> = 0.01</span>
+PIC-01</p></li>
+<li><p>Presión do Lazo de Síntese</p></li>
+<li><p>RPM do Compresor K2-1 110.0 bar</p></li>
+<li><p>Directa</p></li>
+</ul>
+<p><span
+class="math inline"><em>K</em><sub><em>p</em></sub> = 4.5</span>, <span
+class="math inline"><em>K</em><sub><em>i</em></sub> = 0.20</span>, <span
+class="math inline"><em>K</em><sub><em>d</em></sub> = 0.00</span></p>
+<ul>
+<li><p>TIC-03</p></li>
+<li><p>Temperatura Cabeza D3-1</p></li>
+<li><p>Caudal de Refluxo (<span class="math inline"><em>L</em></span>)
+45.61°C</p></li>
+<li><p>Inversa <span
+class="math inline"><em>K</em><sub><em>p</em></sub> = −2.5</span>, <span
+class="math inline"><em>K</em><sub><em>i</em></sub> = −0.10</span>,
+<span class="math inline"><em>K</em><sub><em>d</em></sub> = −0.05</span>
+LIC-02 Nivel de Fondos de Torre Calor do Refervedor (<span
+class="math inline"><em>Q</em><sub><em>R</em></sub></span>) 50.0%
+Directa <span
+class="math inline"><em>K</em><sub><em>p</em></sub> = 3.5</span>, <span
+class="math inline"><em>K</em><sub><em>i</em></sub> = 0.15</span>, <span
+class="math inline"><em>K</em><sub><em>d</em></sub> = 0.10</span></p></li>
+<li><p>Ecuación de Resposta Dinámica Amortiguada Cando o sistema sofre
+unha perturbación de fluxo, a resposta temporal da temperatura de cabeza
+da torre (<span class="math inline"><em>T</em><sub>cabeza</sub></span>)
+responde á transferencia de segundo orde domada polo PID, modelada no
+frontend coma:</p></li>
+</ul>
+<p><span
+class="math display"><em>T</em><sub>cabeza</sub>(<em>t</em>) = 45.61 + <em>Δ</em><em>T</em><sub>0</sub> ⋅ <em>e</em><sup>−<em>ζ</em> ⋅ <em>ω</em><sub><em>n</em></sub> ⋅ <em>t</em></sup> ⋅ cos (<em>ω</em><sub><em>d</em></sub> ⋅ <em>t</em>)</span></p>
+<p>Onde <span class="math inline"><em>ζ</em> = 0.65</span> (coeficiente
+de amortiguamento crítico) garante que a torre estabilice as oscilacións
+e regrese ao estado estacionario de deseño nun tempo inferior a 60
+segundos sen xerar sobredeseños destructivos na destilación.</p>
+<h2 id="diagrama-de-control">Diagrama de control</h2>
+<p><img src="./tgf-adrian-fig1.png" /></p>
+<h2 id="resumo-de-datos-de-deseño-para-a-túa-presentación">Resumo de
+Datos de Deseño para a túa Presentación</h2>
+<h3 id="sección-de-gasificación-1-bar">Sección de Gasificación (1
+bar)</h3>
+<ul>
+<li><p>Alimentación (Piñeiro Neto): <span class="math inline">1000
+kg/h</span> (Normalizado ao <span class="math inline">100.0%</span>
+elemental na barra lateral).</p></li>
+<li><p>Inxección de Aire: <span class="math inline">600 kg/h</span>
+(Entrada neta de Nitróxeno: <span class="math inline">418.0
+kmol/h</span> de atoms equivalentes).</p></li>
+<li><p>Temperatura Operativa (RGibbs): <span
+class="math inline">750<sup>∘</sup>C</span> (Estable por control
+TIC-01).</p></li>
+<li><p>Caudal de Syngas Limpo: <span class="math inline">3057.8
+kg/h</span>.</p></li>
+</ul>
+<h3 id="sección-de-síntese-de-metanol-110-bar">Sección de Síntese de
+Metanol (110 bar)</h3>
+<ul>
+<li><p>Presión de Saída Compresor (K2-1): <span
+class="math inline">110.0 bar</span> (Protexido con ratio de etapa <span
+class="math inline"> ≤ 3</span>).</p></li>
+<li><p>Temperatura de Entrada ao PFR (R2-1): <span
+class="math inline">150<sup>∘</sup>C</span> <span
+class="math inline">→</span> Hotspot</p></li>
+<li><p>Máximo: <span class="math inline">267<sup>∘</sup>C</span>
+(Control cinético LHHW).</p></li>
+<li><p>Divisor de Fluxo (SPT2-1): <span class="math inline">75%</span>
+de Reciclo Interno / <span class="math inline">25%</span> de Purga
+Crítica Estacionaria.</p></li>
+<li><p>Peche de Inertes: Purga de Gases Out = <span
+class="math inline">418.0 kmol/h</span> de N (Erro de peche global:
+<span class="math inline">0.00%</span>).</p></li>
+</ul>
+<h3 id="sección-de-dme-e-purificación-14.7-bar-2.6-bar">Sección de DME e
+Purificación (14.7 bar / 2.6 bar)</h3>
+<ul>
+<li><p>Alimentación ao Reactor (R3-1): <span
+class="math inline">97.41%</span> pureza de Metanol a <span
+class="math inline">154<sup>∘</sup>C</span> e <span
+class="math inline">15.1 bar</span>.</p></li>
+<li><p>Temperatura de Reacción (REquil): <span
+class="math inline">250<sup>∘</sup>C</span> (Deshidratación
+catalítica).</p></li>
+<li><p>Torre de Destilación D3-1 (Cabeza): <span
+class="math inline">45.61<sup>∘</sup>C</span> e <span
+class="math inline">14.7 bar</span> (Control TIC-03 por Refluxo <span
+class="math inline"><em>L</em></span>).</p></li>
+<li><p>Rendemento Final de DME: <span class="math inline">438.47
+kg/h</span> cunha pureza comercial garantida do <span
+class="math inline">99.90%</span>.</p></li>
+<li><p>Lazo de Reciclo II (Retorno de MeOH): Corrente 27 pechada sobre a
+columna separadora anterior.</p></li>
+</ul>
+<h2 id="mapa-de-fluxos-e-balances-xemelo-dixital">MAPA DE FLUXOS E
+BALANCES (XEMELO DIXITAL)</h2>
+<p>```{mermaid} graph TD %% — CONFIGURACIÓN DE ESTILOS — classDef
+styleEntradas fill:#1E3A8A,stroke:#1E3A8A,color:#fff,stroke-width:2px;
+classDef styleAparatos
+fill:#F3F4F6,stroke:#9CA3AF,color:#111827,stroke-width:2px; classDef
+styleLoxicas
+fill:#DBEAFE,stroke:#3B82F6,color:#1E40AF,stroke-width:1px,stroke-dasharray:
+5 5; classDef styleProducto
+fill:#10B981,stroke:#059669,color:#fff,stroke-width:3px; classDef
+styleRefugallo
+fill:#EF4444,stroke:#DC2626,color:#fff,stroke-width:1px;</p>
+<pre><code>%% --- ENTRADAS ---
+InBiomasa([&quot;🪵 Biomasa: 1000 kg/h&quot;]) --&gt; R1-1
+InAire([&quot;💨 Inxección Aire: 600 kg/h&quot;]) --&gt; R1-3
+
+subgraph Modulo_I [MODULO I: GASIFICACION]
+    R1-1[&quot;Secadoiro R1-1&quot;] --&gt; OpSecado{&quot;Auga Vapor Out&quot;}
+    OpSecado --&gt; OutVapor[&quot;Refugallo: Humidade&quot;]:::styleRefugallo
+    OpSecado --&gt; R1-2[&quot;Piroliser R1-2&quot;]
+    
+    R1-2 --&gt; OpPiro{&quot;Descomposición Yield&quot;}
+    OpPiro --&gt; R1-3[&quot;Gasificador R1-3 &lt;br/&gt; T: 750°C | P: 1 bar | Gibbs&quot;]
+    
+    R1-3 --&gt; SEP1-1[&quot;Separador&quot;]
+    SEP1-1 --&gt; OpCinza{&quot;Cinzas&quot;}
+    OpCinza --&gt; OutCinza[&quot;Refugallo: Cinzas&quot;]:::styleRefugallo
+    
+    OpCinza --&gt; E1M[&quot;Tren Térmico e Corte Flash &lt;br/&gt; Syngas Limpo: 3057.8 kg/h&quot;]
+    E1M --&gt; OpFlash1{&quot;Auga Condensada&quot;}
+    OpFlash1 --&gt; OutAgua1[&quot;Refugallo: Auga Condensada&quot;]:::styleRefugallo
+end
+
+%% Conexión inter-módulo (Syngas Purificado)
+OpFlash1 --&gt; K2-1
+
+subgraph Modulo_II_III [MODULO II e III: COMPRESION, SINTESE E RECICLO I]
+    K2-1[&quot;Compresor K2-1 &lt;br/&gt; Elevación a 110 bar | Ratio &lt; 3&quot;] --&gt; R2-1
+    R2-1[&quot;Reactor Metanol R2-1 &lt;br/&gt; T: 150°C -&gt; 267°C | Cinética LHHW&quot;] --&gt; SPT2-1
+    
+    SPT2-1[&quot;Divisor de Fluxo SPT2-1&quot;] --&gt; OpSplit1{&quot;Purga vs Reciclo&quot;}
+    
+    %% LAZO DE RECICLO I (Cara ao compresor)
+    OpSplit1 -. &quot;Reciclo I: 75% Gas&quot; .-&gt; K2-1
+    
+    OpSplit1 --&gt; OutPurga1[&quot;Purga Crítica 25% &lt;br/&gt; Sae N2: 418.0 kmol/h &lt;br/&gt; Erro Peche: 0.00%&quot;]:::styleRefugallo
+end
+
+%% Conexión inter-módulo (Fase Líquida)
+SPT2-1 --&gt; R3-1
+
+subgraph Modulo_IV_V [MODULO IV e V: SINTESE DME E PURIFICACION]
+    R3-1[&quot;Reactor de DME R3-1 &lt;br/&gt; MeOH -&gt; DME + H2O | Equilibrio 250°C&quot;] --&gt; D3-1
+    
+    D3-1[&quot;Torre Destilación D3-1 &lt;br/&gt; Cabeza: 45.61°C | P: 14.7 bar&quot;] --&gt; OpMesh1{&quot;Separación&quot;}
+    OpMesh1 --&gt; OutDME[[&quot;PRODUTO: DME 99.90% &lt;br/&gt; Caudal: 438.47 kg/h&quot;]]:::styleProducto
+    
+    OpMesh1 -- &quot;Colas&quot; --&gt; D3-2[&quot;Torre Destilación D3-2&quot;]
+    
+    D3-2 --&gt; OpMesh2{&quot;Corte Binario&quot;}
+    OpMesh2 -- &quot;Colas&quot; --&gt; OutAgua2[&quot;Refugallo: Auga de Proceso&quot;]:::styleRefugallo
+    
+    OpMesh2 -- &quot;Cabeza: MeOH Retorno&quot; --&gt; P3-2[&quot;Bomba P3-2 &lt;br/&gt; Reciclo II&quot;]
+    
+    %% LAZO DE RECICLO II (Retorna á entrada de purificación/destilación)
+    P3-2 -. &quot;Reciclo II&quot; .-&gt; D3-1
+end
+
+%% --- ASIGNACIÓN DE ESTILOS ---
+class InBiomasa,InAire styleEntradas;
+class R1-1,R1-2,R1-3,SEP1-1,E1M,K2-1,R2-1,SPT2-1,R3-1,D3-1,D3-2,P3-2 styleAparatos;
+class OpSecado,OpPiro,OpCinza,OpFlash1,OpSplit1,OpMesh1,OpMesh2 styleLoxicas;</code></pre>
+<pre><code>
+
+```{mermaid}
+graph TD 
+
+    %% --- CONFIGURACIÓN DE ESTILOS QUÍMICOS ---
+
+    classDef styleEntradas fill:#1E3A8A,stroke:#1E3A8A,color:#fff,stroke-width:2px;
+    classDef styleAparatos fill:#F3F4F6,stroke:#9CA3AF,color:#111827,stroke-width:2px;
+    classDef styleLoxicas fill:#DBEAFE,stroke:#3B82F6,color:#1E40AF,stroke-width:1px,stroke-dasharray: 5 5;
+    classDef styleProducto fill:#10B981,stroke:#059669,color:#fff,stroke-width:3px;
+    classDef styleRefugallo fill:#EF4444,stroke:#DC2626,color:#fff,stroke-width:1px;
+
+    %% --- ENTRADAS ELEMENTAIS ---
+    InBiomasa([Biomasa: C H O N S Ash]) --&gt; R1-1
+    InAire([Aire: O2 e N2]) --&gt; R1-3
+
+    subgraph Modulo_I [MODULO I: EVOLUCION QUIMICA DO SYNGAS]
+        R1-1[Secadoiro R1-1] --&gt; OpSecado{&quot;RStoic: Humidade Out&quot;}
+        OpSecado --&gt; R1-2[Reactor Pirolise R1-2]
+        R1-2 --&gt; OpPiro{&quot;RYield: Ruptura Biomasa&quot;}
+        
+        OpPiro --&gt; R1-3[Gasificador R1-3]
+        R1-3 --&gt; OpGibbs{&quot;RGibbs: Reducion de Char &lt;br/&gt; C + CO2 -&gt; 2CO&quot;}
+        OpGibbs --&gt; SEP1-1[Separador Solidos]
+        
+        SEP1-1 --&gt; OpCinza{&quot;Filtro Solidos&quot;}
+        OpCinza --&gt; OutCinza[Cinzas Solidas Out]:::styleRefugallo
+        
+        OpCinza --&gt; E1M[Tren Termico]
+        E1M --&gt; OpCool1{&quot;Arrefriamento&quot;}
+        OpCool1 --&gt; F1-1[Separador Flash F1-1]
+        F1-1 --&gt; OpFlash1{&quot;Condensacion H2O&quot;}
+        OpFlash1 --&gt; OutAgua1[&quot;Auga Separada: 99.8% H2O&quot;]:::styleRefugallo
+    end
+
+    %% Conexión inter-módulo
+    OpFlash1 --&gt; H2-1
+
+    subgraph Modulo_II [MODULO II: SINTESE DE CH3OH]
+        H2-1[Quentador H2-1] --&gt; OpHeat1{&quot;Syngas Almentacion&quot;}
+        OpHeat1 --&gt; K2-1[&quot;Compresor K2-1 &lt;br/&gt; Mestura de Gases&quot;]
+        K2-1 --&gt; OpComp{&quot;Compresion&quot;}
+        OpComp --&gt; R2-1[Reactor PFR R2-1]
+        R2-1 --&gt; OpLHHW{&quot;Cinetica LHHW: &lt;br/&gt; CO + 2H2 -&gt; CH3OH&quot;}
+    end
+
+    %% Saída do Reactor
+    OpLHHW --&gt; V2-1
+
+    subgraph Modulo_III [MODULO III: SEPARACION DE INERTES]
+        V2-1[Valvula V2-1] --&gt; OpExp1{&quot;Condensacion Parcial&quot;}
+        OpExp1 --&gt; F2-1[Separador Flash F2-1]
+        
+        F2-1 --&gt; SPT2-1[Divisor SPT2-1]
+        SPT2-1 --&gt; OpSplit1{&quot;Purga Inertes&quot;}
+        
+        OpSplit1 --&gt; OutPurga1[&quot;Gases de Purga: &lt;br/&gt; N2: 18.54%&quot;]:::styleRefugallo
+        
+        %% RETORNO DO LAZO I
+        OpSplit1 -. Reciclo I .-&gt; K2-1
+        
+        F2-1 --&gt; V2-2[Valvula V2-2]
+        V2-2 --&gt; OpExp2{&quot;Desgasificacion&quot;}
+        OpExp2 --&gt; S2-1[Columna Separadora S2-1]
+        S2-1 --&gt; OpMix1{&quot;Mestura: 97.41% CH3OH&quot;}
+    end
+
+    %% Conexión inter-módulo
+    OpMix1 --&gt; P3-1
+
+    subgraph Modulo_IV [MODULO IV: REACCION SINTESE DME]
+        P3-1[Bomba P3-1] --&gt; OpPump1{&quot;Fase Vapor&quot;}
+        OpPump1 --&gt; R3-1[Reactor Equilibrio R3-1]
+        R3-1 --&gt; OpEquil{&quot;REquil: &lt;br/&gt; 2 CH3OH -&gt; DME + H2O&quot;}
+    end
+
+    %% Mestura Multicompoñente cara as torres
+    OpEquil --&gt; D3-1
+
+    subgraph Modulo_V [MODULO V: SEPARACION MULTICOMPONENTE]
+        D3-1[Torre Destilacion D3-1] --&gt; OpMESH1{&quot;Modelo MESH: &lt;br/&gt; DME Volatilidade&quot;}
+        OpMESH1 --&gt; OutDME[[&quot;PRODUTO FINAL: &lt;br/&gt; DME Puro 99.90%&quot;]]:::styleProducto
+        
+        OpMESH1 --&gt; V3-1[Valvula V3-1]
+        V3-1 --&gt; OpCond3{&quot;Alimentacion D3-2&quot;}
+        OpCond3 --&gt; D3-2[Torre Destilacion D3-2]
+        D3-2 --&gt; OpMESH2{&quot;Separacion Binaria &lt;br/&gt; Metanol e Auga&quot;}
+        
+        OpMESH2 --&gt; OutAgua2[&quot;Auga de Proceso &lt;br/&gt; Maior 99.5% H2O&quot;]:::styleRefugallo
+        OpMESH2 --&gt; P3-2[Bomba Reciclo P3-2]
+        P3-2 --&gt; OpPump2{&quot;Impulsion Retorno&quot;}
+        
+        %% RETORNO DO LAZO II
+        OpPump2 -. Reciclo II .-&gt; S2-1
+    end
+
+    %% --- ASIGNACIÓN DE ESTILOS ---
+    class InBiomasa styleEntradas;
+    class InAire styleEntradas;
+    class R1-1 styleAparatos;
+    class R1-2 styleAparatos;
+    class R1-3 styleAparatos;
+    class SEP1-1 styleAparatos;
+    class E1M styleAparatos;
+    class F1-1 styleAparatos;
+    class H2-1 styleAparatos;
+    class K2-1 styleAparatos;
+    class R2-1 styleAparatos;
+    class V2-1 styleAparatos;
+    class F2-1 styleAparatos;
+    class SPT2-1 styleAparatos;
+    class V2-2 styleAparatos;
+    class S2-1 styleAparatos;
+    class P3-1 styleAparatos;
+    class R3-1 styleAparatos;
+    class D3-1 styleAparatos;
+    class V3-1 styleAparatos;
+    class D3-2 styleAparatos;
+    class P3-2 styleAparatos;
+    class OpSecado styleLoxicas;
+    class OpPiro styleLoxicas;
+    class OpGibbs styleLoxicas;
+    class OpCinza styleLoxicas;
+    class OpCool1 styleLoxicas;
+    class OpFlash1 styleLoxicas;
+    class OpHeat1 styleLoxicas;
+    class OpComp styleLoxicas;
+    class OpLHHW styleLoxicas;
+    class OpExp1 styleLoxicas;
+    class OpSplit1 styleLoxicas;
+    class OpExp2 styleLoxicas;
+    class OpMix1 styleLoxicas;
+    class OpPump1 styleLoxicas;
+    class OpEquil styleLoxicas;
+    class OpMESH1 styleLoxicas;
+    class OpCond3 styleLoxicas;
+    class OpMESH2 styleLoxicas;
+    class OpPump2 styleLoxicas;</code></pre>

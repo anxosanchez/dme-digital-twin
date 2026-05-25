@@ -85,6 +85,8 @@ class DigitalTwinEngine:
             "out_water_d32": 0.0,
             "out_purge_gas": 0.0,
         }
+        self.active_incident = "Operación Nominal (Segura)"
+        self.gasifier_T_override = None
 
     def simulation_step(self):
         """
@@ -100,9 +102,23 @@ class DigitalTwinEngine:
         atoms_mol_h, ash_kgh, water_vapor = self.pyrolysis.compute(biomass_dry, water_rel, self.feedstock.get_composition())
         
         # 3. Gasificación
+        if self.active_incident == "Inxección de Biomasa Húmida (Chuvia no Silo)":
+            if hasattr(self, "gasifier_T_override") and self.gasifier_T_override is not None:
+                self.gasifier.T_setpoint = self.gasifier_T_override
+                self.gasifier.T_current = self.gasifier_T_override
+            else:
+                self.gasifier.T_setpoint = 680.0 + 273.15
+                self.gasifier.T_current = 680.0 + 273.15
+        else:
+            self.gasifier.T_setpoint = 750.0 + 273.15
+            
         # Dinámica de temperatura do gasificador
         self.gasifier.step_thermal(syngas_flow_mol_h=None, dt=self.dt)
         syngas_raw_mol_h = self.gasifier.compute_equilibrium(atoms_mol_h, self.air_feed_kgh)
+        
+        if self.active_incident == "Inxección de Biomasa Húmida (Chuvia no Silo)":
+            syngas_raw_mol_h[1] *= 0.65  # reducir un 35% o factor estequiométrico de CO
+            syngas_raw_mol_h[4] *= 2.5   # elevar a fracción de vapor de auga (H2O)
         
         # 4. Separación Flash F1-1
         syngas_1_mol_h, liquid_1_mol_h, ash_out = self.flash1.compute(syngas_raw_mol_h, ash_kgh)
@@ -124,6 +140,17 @@ class DigitalTwinEngine:
         # =========================================================
         # Mesturar gas fresco co Reciclo I (Corrente R)
         syngas_mixed_mol_h = np.maximum(syngas_1_mol_h + self.recycle_1_mol_h, 0.0)
+        
+        if self.active_incident == "Bloqueo de Válvula de Purga (Efecto Bóla de Neve de N2)":
+            tot = np.sum(syngas_mixed_mol_h)
+            if tot > 0:
+                # Elevar a fracción molar de N2 no Lazo I ao 42%
+                syngas_mixed_mol_h[6] = tot * 0.42
+                # Asfixiar presións parciais de H2 e CO
+                syngas_mixed_mol_h[0] *= 0.3 # H2
+                syngas_mixed_mol_h[1] *= 0.3 # CO
+                # Normalizar
+                syngas_mixed_mol_h = (syngas_mixed_mol_h / np.sum(syngas_mixed_mol_h)) * tot
         
         # Calcular a presión real actual no primeiro nodo do reactor para o PID
         n_first = np.maximum(self.state_meoh[:9], 0.0)
@@ -174,6 +201,9 @@ class DigitalTwinEngine:
         F_out_kmol_s = C_valve * 0.5 * np.sqrt(dP_valve)
         meoh_out_mol_h = np.maximum(y_last * F_out_kmol_s * 1000.0 * 3600.0, 0.0)
         
+        if self.active_incident == "Bloqueo de Válvula de Purga (Efecto Bóla de Neve de N2)":
+            meoh_out_mol_h[3] *= 0.05  # afundindo o rendemento do reactor PFR (R2-1) a un 5%
+        
         # =========================================================
         # MÓDULO III: Tren de purificación de metanol e Reciclo I
         # =========================================================
@@ -221,7 +251,20 @@ class DigitalTwinEngine:
         # =========================================================
         # Columna D3-1 (Purificación de DME)
         # DME sae por cabeza
-        top_d31, bot_d31 = self.col_d3_1.compute(dme_out_mol_h, purity_target_top=99.90, T_set_bot=155.0)
+        purity_target_top = 99.90
+        if self.active_incident == "Inundación por Pico de Caudal na Torre D3-1":
+            purity_target_top = 94.20
+            
+        top_d31, bot_d31 = self.col_d3_1.compute(dme_out_mol_h, purity_target_top=purity_target_top, T_set_bot=155.0)
+        
+        if self.active_incident == "Inundación por Pico de Caudal na Torre D3-1":
+            tot_top = np.sum(top_d31)
+            if tot_top > 0:
+                top_d31[5] = tot_top * 0.942 # DME ao 94.2%
+                remaining = tot_top * 0.058
+                top_d31[4] = remaining * 0.8 # H2O
+                top_d31[3] = remaining * 0.2 # MeOH
+                top_d31 = (top_d31 / np.sum(top_d31)) * tot_top
         
         # Columna D3-2 (Recuperación de Metanol e Reciclo II)
         # Entra bot_d31 (MeOH + H2O)
