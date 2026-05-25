@@ -112,6 +112,36 @@ def calcular_resposta_humidade(tempo, modo_lazo, caudal_biomasa, queimadores_act
     return T
 
 # ==========================================
+# MOTOR MATEMÁTICO RADFRAC (D3-1)
+# ==========================================
+def calcular_mesh_torre(modo, R, F, DV):
+    pratos = np.arange(1, 8)
+    
+    if modo == "Refluxo Total (D=0)":
+        # Vapor interno segue o perfil nominal sen efecto do alimento F (F=0)
+        V = 600 + 200 * np.exp(-0.25 * (pratos - 1))
+        # Líquido L = V * (R / (R + 1)) * (1 + 0.1 * sin(prato))
+        L = V * (R / (R + 1)) * (1 + 0.1 * np.sin(pratos))
+        
+        # Fraccións molares con separación máxima
+        x_DME = 0.9999 * np.exp(-0.85 * (pratos - 1))
+        x_MeOH = 0.8 * (1 - x_DME) * (pratos / 7)
+        x_H2O = 1.0 - x_DME - x_MeOH
+    else:
+        # Operación Nominal (Produción)
+        # O vapor inclúe o efeito do alimento F
+        V = 600 + 200 * np.exp(-0.25 * (pratos - 1)) + (F * 0.4)
+        # Líquido segue a ecuación acoplada
+        L = V * (R / (R + 1)) * (1 + 0.1 * np.sin(pratos))
+        
+        # Fraccións molares nominais
+        x_DME = 0.999 * np.exp(-0.5 * (pratos - 1))
+        x_MeOH = 0.8 * (1 - x_DME) * (pratos / 7)
+        x_H2O = 1.0 - x_DME - x_MeOH
+        
+    return pratos, L, V, x_DME, x_MeOH, x_H2O
+
+# ==========================================
 # INICIALIZACIÓN DO ESTADO E VARIABLES
 # ==========================================
 dt = 1.0  # Paso de integración global
@@ -133,6 +163,16 @@ if 'tic01_queimadores' not in st.session_state:
 if 'incident_start_time' not in st.session_state:
     st.session_state.incident_start_time = None
 
+# Variables para a columna D3-1 (RadFrac)
+if 'modo_operacion_col' not in st.session_state:
+    st.session_state.modo_operacion_col = "Operación Nominal (Produción)"
+if 'plates_F_new' not in st.session_state:
+    st.session_state.plates_F_new = 689
+if 'plates_R_nominal' not in st.session_state:
+    st.session_state.plates_R_nominal = 2.0
+if 'plates_DV_nominal' not in st.session_state:
+    st.session_state.plates_DV_nominal = 0.33
+
 # Variables protexidas para métricas e UI
 if 'caudal_dme' not in st.session_state:
     st.session_state.caudal_dme = 0.00
@@ -151,6 +191,36 @@ if 'pid_sim' not in st.session_state:
         'R_recycle': []
     }
 
+# ==========================================
+# CÁLCULO DINÁMICO DE ACOPLAMENTO RADFRAC (D3-1)
+# ==========================================
+modo_dest = st.session_state.modo_operacion_col
+F_dest = st.session_state.plates_F_new
+
+if modo_dest == "Operación Nominal (Produción)":
+    R_dest = st.session_state.plates_R_nominal
+    DV_dest = st.session_state.plates_DV_nominal
+else:
+    R_dest = 9999.0
+    DV_dest = 0.0
+
+# Executar a emulación MESH da columna
+pratos_mesh, L_mesh, V_mesh, x_DME_mesh, x_MeOH_mesh, x_H2O_mesh = calcular_mesh_torre(modo_dest, R_dest, F_dest, DV_dest)
+
+# Condición de corrente de saída condicional
+modo_refluxo = modo_dest
+D_V_split = DV_dest
+
+if modo_refluxo == "Refluxo Total (D=0)":
+    caudal_DME_produto = 0.0
+    pureza_DME_comercial = 0.0
+else:
+    caudal_DME_produto = V_mesh[0] * D_V_split
+    pureza_DME_comercial = x_DME_mesh[0] * 100.0
+
+if not st.session_state.is_running:
+    caudal_DME_produto = 0.0
+
 engine = st.session_state.engine
 analytics = st.session_state.analytics
 
@@ -159,6 +229,10 @@ analytics = st.session_state.analytics
 # ==========================================
 st.sidebar.title("🎛️ DCS Control")
 st.sidebar.markdown("---")
+
+# Alerta global de Refluxo Total na barra lateral
+if st.session_state.modo_operacion_col == "Refluxo Total (D=0)":
+    st.sidebar.error("🚨 **PRODUCIÓN DETIDA:** A columna D3-1 está en **Refluxo Total**. A planta atópase en ciclo pechado sen saída comercial.")
 
 btn_run = st.sidebar.button("▶️ Executar Simulación", use_container_width=True)
 if btn_run:
@@ -359,7 +433,7 @@ if 'nitroxeno_acumulado' not in st.session_state:
 kpi_dme_delta = "Activo" if btn_run else "Parado"
 
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("Caudal de DME", f"{st.session_state.caudal_dme:.2f} kg/h", delta=kpi_dme_delta)
+col1.metric("Caudal de DME", f"{caudal_DME_produto:.2f} kg/h", delta=kpi_dme_delta)
 col2.metric("Hotspot Metanol", f"{st.session_state.hotspot_t:.1f} °C", delta=f"{st.session_state.hotspot_t - 150.0:.1f} °C" if st.session_state.hotspot_t > 150 else None)
 col3.metric("K2-1 Descarga", f"{st.session_state.presion_sistema:.1f} bar", delta=f"{st.session_state.presion_sistema - 1.0:.1f} bar" if st.session_state.presion_sistema > 1 else None)
 col4.metric("Acumulación N2", f"{st.session_state.nitroxeno_acumulado:.2f} %", delta="SP: 18.54 %" if btn_run else None)
@@ -369,11 +443,12 @@ st.markdown("---")
 # ==========================================
 # PESTANAS DE VISUALIZACIÓN
 # ==========================================
-tab_scada, tab_pid, tab_analytics, tab_incidents = st.tabs([
+tab_scada, tab_pid, tab_analytics, tab_incidents, tab_plates = st.tabs([
     "📊 SCADA Overview", 
     "🎛️ Control P&ID (Vivo)", 
     "📈 Motor Analítico e Balances",
-    "🚨 Simulación de Incidencias"
+    "🚨 Simulación de Incidencias",
+    "📊 Perfil de Pratos (D3-1)"
 ])
 
 # ----------------- TAB 1: SCADA -----------------
@@ -381,7 +456,7 @@ with tab_scada:
     # Variables dinámicas de visualización SCADA baseadas no incidente e no estado de marcha
     t_gasifier_scada = 750.0
     caudal_syngas_scada = 3057.81
-    purity_dme_scada = 99.90
+    purity_dme_scada = pureza_DME_comercial
     delta_p_d31_scada = 20.0 # mbar nominal
     
     if btn_run:
@@ -585,6 +660,115 @@ with tab_incidents:
             Reducir de inmediato o refluxo da torre. Diminuír a potencia de calefacción no calderín (Q_reboiler) para baixar a velocidade do vapor ascensional. Se a inundación persiste, pasar a torre a modo de refluxo total para estabilizar os pratos e evitar o arrastre continuo.
         </div>
         """, unsafe_allow_html=True)
+
+# ----------------- TAB 5: PERFIL DE PRATOS (D3-1) -----------------
+with tab_plates:
+    st.markdown("### 📊 Perfil de Pratos Teóricos en D3-1 (RadFrac Emulation)")
+    st.markdown("Esta sección modela o comportamento hidrodinámico e as fraccións molares líquidas prato a prato en tempo real.")
+    
+    # 1. Controis interactivos (sliders) en columnas superiores
+    col_mode, col_feed = st.columns(2)
+    with col_mode:
+        modo_operacion = st.radio(
+            "Modo de Operación da Columna:",
+            ["Operación Nominal (Produción)", "Refluxo Total (D=0)"],
+            horizontal=True
+        )
+    with col_feed:
+        F_val = st.slider(
+            "Caudal de Alimentación dende R3-1 (kg/h)",
+            min_value=300,
+            max_value=1000,
+            value=689,
+            step=10,
+            key="plates_F_new"
+        )
+        
+    st.markdown("---")
+    
+    # Colocar os sliders de fraccionamiento condicionales
+    col_r, col_dv = st.columns(2)
+    
+    if modo_operacion == "Operación Nominal (Produción)":
+        with col_r:
+            R_val = st.slider(
+                "Relación de Refluxo Exterior (R = L/D)",
+                min_value=0.5,
+                max_value=5.0,
+                value=2.0,
+                step=0.1,
+                key="plates_R_nominal"
+            )
+        with col_dv:
+            DV_val = st.slider(
+                "Relación Destilado / Vapor de Cabezas (D/V)",
+                min_value=0.1,
+                max_value=0.9,
+                value=0.33,
+                step=0.01,
+                key="plates_DV_nominal"
+            )
+    else:
+        # Refluxo Total
+        R_val = 9999.0
+        DV_val = 0.0
+        with col_r:
+            st.info("ℹ️ **Refluxo Total Activo:** R fixado en ∞ (9999.0)")
+        with col_dv:
+            st.info("ℹ️ **Destilado Pechado:** D/V fixado en 0.0")
+
+    # 2. Motor de cálculo MESH integrado
+    pratos, L, V, x_DME, x_MeOH, x_H2O = calcular_mesh_torre(modo_operacion, R_val, F_val, DV_val)
+    
+    # Crear nomes dos pratos para o eixe y da gráfica
+    prato_names = [f"Prato {i}" if i not in [1, 7] else (f"Prato 1 (Condensador)" if i == 1 else f"Prato 7 (Refervedor)") for i in pratos]
+    
+    # 3. Requisitos gráficos (visualización SCADA)
+    col_g1, col_g2 = st.columns(2)
+    
+    with col_g1:
+        st.markdown("#### 🌊 Hidrodinámica Interna (Líquido vs Vapor)")
+        df_hydro = pd.DataFrame({
+            "Prato": prato_names,
+            "Líquido (L)": L,
+            "Vapor (V)": V
+        }).set_index("Prato")
+        # Invertir para que o prato 1 quede arriba e o 7 abaixo
+        df_hydro_rev = df_hydro.iloc[::-1]
+        st.bar_chart(df_hydro_rev, horizontal=True, stack=False)
+        
+    with col_g2:
+        st.markdown("#### 🧪 Perfil de Fraccións Molares (x_i)")
+        df_chem = pd.DataFrame({
+            "Prato": prato_names,
+            "DME (x_DME)": x_DME,
+            "Metanol (x_MeOH)": x_MeOH,
+            "Auga (x_H2O)": x_H2O
+        }).set_index("Prato")
+        # Invertir para que o prato 1 quede arriba e o 7 abaixo
+        df_chem_rev = df_chem.iloc[::-1]
+        st.bar_chart(df_chem_rev, horizontal=True, stack=True)
+        
+    # 4. Matriz de datos en tempo real
+    st.markdown("#### 📋 Matriz MESH de Datos Analíticos")
+    df_mesh_table = pd.DataFrame({
+        "Etapa / Prato": prato_names,
+        "Caudal Líquido L (kg/h)": L,
+        "Caudal Vapor V (kg/h)": V,
+        "Frac. Molar DME (x_DME)": x_DME,
+        "Frac. Molar MeOH (x_MeOH)": x_MeOH,
+        "Frac. Molar Auga (x_H2O)": x_H2O
+    }).set_index("Etapa / Prato")
+    
+    # Formateo a 2 decimais para caudais e 4 decimais para fraccións molares
+    formatted_df = df_mesh_table.style.format({
+        "Caudal Líquido L (kg/h)": "{:.2f}",
+        "Caudal Vapor V (kg/h)": "{:.2f}",
+        "Frac. Molar DME (x_DME)": "{:.4f}",
+        "Frac. Molar MeOH (x_MeOH)": "{:.4f}",
+        "Frac. Molar Auga (x_H2O)": "{:.4f}"
+    })
+    st.dataframe(formatted_df, use_container_width=True)
 
 if btn_run:
     time.sleep(1.0)
